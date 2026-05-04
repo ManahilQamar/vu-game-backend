@@ -4,7 +4,6 @@ require('dotenv').config();
 
 const app = express();
 
-// IMPORTANT: Railway PORT must be used like this
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
@@ -19,6 +18,7 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+// IMPORTANT FIX HERE 👇
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
