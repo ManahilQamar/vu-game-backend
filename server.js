@@ -68,7 +68,10 @@ model: 'llama-3.1-8b-instant',
 });
 
 /* ── Health check ── */
-app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`VU Backend running on port ${PORT}`);
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+app.listen(process.env.PORT, '0.0.0.0', () => {
+  console.log("Server running");
 });
