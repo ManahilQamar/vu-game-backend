@@ -1,5 +1,6 @@
 const express = require('express');
 const cors    = require('cors');
+const axios   = require('axios');
 require('dotenv').config();
 
 const app  = express();
@@ -37,33 +38,32 @@ Correct Answer: ${correct}
 Explain in simple Roman Urdu + English (mix is fine) why "${correct}" is correct, and briefly why the other options are wrong. Be clear, friendly, and educational. Use bullet points. Max 6 lines.`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key':    process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
+    const response = await axios.post(
+      'https://api.groq.com/openai/v1/chat/completions',
+      {
+model: 'llama-3.1-8b-instant',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 500,
       },
-      body: JSON.stringify({
-        model:      'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages:   [{ role: 'user', content: prompt }],
-      }),
-    });
+      {
+        headers: {
+          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+          'Content-Type':  'application/json',
+        },
+      }
+    );
 
-    if (!response.ok) {
-      const err = await response.text();
-      console.error('Anthropic API error:', err);
-      return res.status(502).json({ error: 'AI service error. Please try again.' });
-    }
-
-    const data        = await response.json();
-    const explanation = data.content.map(b => b.text || '').join('');
+    const explanation = response.data?.choices?.[0]?.message?.content || 'Explanation nahi mil saki.';
     return res.json({ explanation });
 
   } catch (err) {
-    console.error('Server error:', err);
-    return res.status(500).json({ error: 'Server error. Please try again.' });
+    if (err.response) {
+      console.error('Groq error status:', err.response.status);
+      console.error('Groq error data:', JSON.stringify(err.response.data, null, 2));
+      return res.status(502).json({ error: 'AI service error: ' + (err.response.data?.error?.message || 'Unknown') });
+    }
+    console.error('Server error:', err.message);
+    return res.status(500).json({ error: 'Server error: ' + err.message });
   }
 });
 
