@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({
   origin: [
     'http://localhost:3000',
-    'https://vu-exampreparation.netlify.app',
+    'https://vu-game.vercel.app',
   ]
 }));
 app.use(express.json());
