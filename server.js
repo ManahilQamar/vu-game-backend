@@ -146,3 +146,65 @@ app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 app.listen(PORT, () => {
   console.log(`✅ VU Backend running on http://localhost:${PORT}`);
 });
+
+
+app.post('/api/check-answer', async (req, res) => {
+  try {
+    const { question, correctAnswer, studentAnswer, subjectId } = req.body;
+ 
+    if (!question || !studentAnswer) {
+      return res.status(400).json({ error: 'question and studentAnswer are required' });
+    }
+ 
+    const prompt = `You are a strict but encouraging ${subjectId || ''} teacher checking a student's handwritten/typed solution.
+ 
+QUESTION:
+${question}
+ 
+${correctAnswer ? `CORRECT ANSWER / SOLUTION (for your reference, do not just dump this back):\n${correctAnswer}\n` : ''}
+ 
+STUDENT'S ANSWER/SOLUTION:
+${studentAnswer}
+ 
+Carefully check the student's work step by step. Respond in this exact format:
+ 
+VERDICT: [Correct / Partially Correct / Incorrect]
+ 
+FEEDBACK:
+- Point out exactly which step or part has a mistake (if any), quoting the specific part of their work.
+- Explain what the mistake is and why it's wrong.
+- If correct, briefly confirm why their approach/answer is right.
+- Keep it short, clear, and specific to THEIR work — do not just give a generic solution.
+- Use simple English, suitable for a university student.
+ 
+Do not just restate the correct answer. Focus on reviewing what the student wrote.`;
+ 
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+        max_tokens: 600,
+      }),
+    });
+ 
+    const data = await groqRes.json();
+    const raw = data.choices?.[0]?.message?.content || '';
+ 
+    // Parse verdict + feedback
+    const verdictMatch = raw.match(/VERDICT:\s*(Correct|Partially Correct|Incorrect)/i);
+    const verdict = verdictMatch ? verdictMatch[1] : 'Unknown';
+    const feedback = raw.replace(/VERDICT:.*?\n/i, '').replace(/FEEDBACK:\s*/i, '').trim();
+ 
+    res.json({ verdict, feedback, raw });
+  } catch (err) {
+    console.error('check-answer error:', err);
+    res.status(500).json({ error: 'Failed to check answer' });
+  }
+});
+ 
