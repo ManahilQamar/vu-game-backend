@@ -149,7 +149,7 @@ app.listen(PORT, () => {
 
 // ─────────────────────────────────────────────────────────────────
 //  REPLACE your existing /api/check-answer endpoint in server.js
-//  with this updated version.
+//  with this improved version.
 // ─────────────────────────────────────────────────────────────────
 
 app.post('/api/check-answer', async (req, res) => {
@@ -160,29 +160,38 @@ app.post('/api/check-answer', async (req, res) => {
       return res.status(400).json({ error: 'question and studentAnswer are required' });
     }
 
-    const prompt = `You are a friendly ${subjectId || ''} teacher checking a student's solution. The student is a Pakistani university student, so explain in ROMAN URDU mixed with simple English (the way Pakistani students text each other) — NOT pure English, NOT pure formal Urdu script. Keep it warm, simple, and easy to understand.
+    const prompt = `You are an experienced, confident ${subjectId || ''} university teacher in Pakistan, explaining directly to a student. Write the way a real teacher talks — clear, warm, and to the point. NO repetition, NO filler sentences, NO uncertain phrasing like "tumne is baat ka jawab nahi diya". Just teach.
+
+Write in ROMAN URDU mixed naturally with English technical terms (the way Pakistani teachers actually explain — e.g. "Yahan formula lagayenge", "Is step mein hum dekhte hain ke...", "Answer ka matlab hai..."). Do NOT write in pure English. Do NOT write in Urdu script.
 
 QUESTION:
 ${question}
 
-${correctAnswer ? `CORRECT ANSWER / SOLUTION (for your reference only, do not just copy-paste this):\n${correctAnswer}\n` : ''}
+${correctAnswer ? `CORRECT SOLUTION (for your own reference — explain it in your own words, do not copy verbatim):\n${correctAnswer}\n` : ''}
 
-STUDENT'S ANSWER/SOLUTION:
+STUDENT'S SUBMITTED ANSWER:
 ${studentAnswer}
 
-Check the student's work carefully step by step. Respond in this EXACT format:
+First, decide if the student's submission is a genuine attempt at solving the problem, or if it's empty/gibberish/an admission of not understanding (e.g. "i don't know", "i can't understand this"). 
+
+Respond in EXACTLY this format:
 
 VERDICT: [Correct / Partially Correct / Incorrect]
 
 FEEDBACK:
-- Agar answer CORRECT hai: Roman Urdu mein tareef karo aur batao kyun unka approach sahi tha (briefly).
-- Agar answer PARTIALLY CORRECT hai: Batao kahan tak sahi tha aur kahan se mistake shuru hui, Roman Urdu mein.
-- Agar answer INCORRECT hai: 
-  1. Pehle batao unki mistake kya thi, exactly kis step par (quote their work).
-  2. Phir POORA sawal STEP BY STEP solve karke dikhao, clearly numbered steps mein (Step 1, Step 2, etc.), Roman Urdu mein samjhao har step.
-  3. Final answer clearly batao.
+If the student did NOT attempt the problem (wrote something like "I don't understand" or left it blank/irrelevant):
+- Don't analyze their "mistake" — there's nothing to analyze. Instead, directly and warmly teach the full solution step by step, as if explaining it for the first time to a student who is stuck. Use short numbered steps (Step 1, Step 2...). End with the final answer clearly highlighted.
 
-Keep formulas and numbers in standard notation, but all explanation text in Roman Urdu + simple English mix. Be encouraging, not harsh.`;
+If the student DID attempt the problem and got it WRONG:
+- In 1-2 sentences, point out exactly where their reasoning went wrong (quote the specific part).
+- Then teach the correct solution step by step (Step 1, Step 2...), explaining the logic simply, not just the math.
+- End with the final answer clearly highlighted.
+
+If the student got it CORRECT or PARTIALLY CORRECT:
+- Briefly and warmly confirm what they did right.
+- If partially correct, clearly point out the one thing missing or wrong, then show the corrected final step and answer.
+
+Keep formulas/numbers in standard notation. Keep total response concise — no more than 150-200 words. Sound like a real teacher, never robotic or repetitive.`;
 
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -193,8 +202,8 @@ Keep formulas and numbers in standard notation, but all explanation text in Roma
       body: JSON.stringify({
         model: 'llama-3.1-8b-instant',
         messages: [{ role: 'user', content: prompt }],
-        temperature: 0.4,
-        max_tokens: 900,
+        temperature: 0.5,
+        max_tokens: 700,
       }),
     });
 
