@@ -147,38 +147,43 @@ app.listen(PORT, () => {
   console.log(`✅ VU Backend running on http://localhost:${PORT}`);
 });
 
+// ─────────────────────────────────────────────────────────────────
+//  REPLACE your existing /api/check-answer endpoint in server.js
+//  with this updated version.
+// ─────────────────────────────────────────────────────────────────
 
 app.post('/api/check-answer', async (req, res) => {
   try {
     const { question, correctAnswer, studentAnswer, subjectId } = req.body;
- 
+
     if (!question || !studentAnswer) {
       return res.status(400).json({ error: 'question and studentAnswer are required' });
     }
- 
-    const prompt = `You are a strict but encouraging ${subjectId || ''} teacher checking a student's handwritten/typed solution.
- 
+
+    const prompt = `You are a friendly ${subjectId || ''} teacher checking a student's solution. The student is a Pakistani university student, so explain in ROMAN URDU mixed with simple English (the way Pakistani students text each other) — NOT pure English, NOT pure formal Urdu script. Keep it warm, simple, and easy to understand.
+
 QUESTION:
 ${question}
- 
-${correctAnswer ? `CORRECT ANSWER / SOLUTION (for your reference, do not just dump this back):\n${correctAnswer}\n` : ''}
- 
+
+${correctAnswer ? `CORRECT ANSWER / SOLUTION (for your reference only, do not just copy-paste this):\n${correctAnswer}\n` : ''}
+
 STUDENT'S ANSWER/SOLUTION:
 ${studentAnswer}
- 
-Carefully check the student's work step by step. Respond in this exact format:
- 
+
+Check the student's work carefully step by step. Respond in this EXACT format:
+
 VERDICT: [Correct / Partially Correct / Incorrect]
- 
+
 FEEDBACK:
-- Point out exactly which step or part has a mistake (if any), quoting the specific part of their work.
-- Explain what the mistake is and why it's wrong.
-- If correct, briefly confirm why their approach/answer is right.
-- Keep it short, clear, and specific to THEIR work — do not just give a generic solution.
-- Use simple English, suitable for a university student.
- 
-Do not just restate the correct answer. Focus on reviewing what the student wrote.`;
- 
+- Agar answer CORRECT hai: Roman Urdu mein tareef karo aur batao kyun unka approach sahi tha (briefly).
+- Agar answer PARTIALLY CORRECT hai: Batao kahan tak sahi tha aur kahan se mistake shuru hui, Roman Urdu mein.
+- Agar answer INCORRECT hai: 
+  1. Pehle batao unki mistake kya thi, exactly kis step par (quote their work).
+  2. Phir POORA sawal STEP BY STEP solve karke dikhao, clearly numbered steps mein (Step 1, Step 2, etc.), Roman Urdu mein samjhao har step.
+  3. Final answer clearly batao.
+
+Keep formulas and numbers in standard notation, but all explanation text in Roman Urdu + simple English mix. Be encouraging, not harsh.`;
+
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -188,23 +193,21 @@ Do not just restate the correct answer. Focus on reviewing what the student wrot
       body: JSON.stringify({
         model: 'llama-3.1-8b-instant',
         messages: [{ role: 'user', content: prompt }],
-        temperature: 0.3,
-        max_tokens: 600,
+        temperature: 0.4,
+        max_tokens: 900,
       }),
     });
- 
+
     const data = await groqRes.json();
     const raw = data.choices?.[0]?.message?.content || '';
- 
-    // Parse verdict + feedback
+
     const verdictMatch = raw.match(/VERDICT:\s*(Correct|Partially Correct|Incorrect)/i);
     const verdict = verdictMatch ? verdictMatch[1] : 'Unknown';
     const feedback = raw.replace(/VERDICT:.*?\n/i, '').replace(/FEEDBACK:\s*/i, '').trim();
- 
+
     res.json({ verdict, feedback, raw });
   } catch (err) {
     console.error('check-answer error:', err);
     res.status(500).json({ error: 'Failed to check answer' });
   }
 });
- 
