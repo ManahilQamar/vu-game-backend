@@ -149,7 +149,7 @@ app.listen(PORT, () => {
 
 // ─────────────────────────────────────────────────────────────────
 //  REPLACE your existing /api/check-answer endpoint in server.js
-//  with this improved version.
+//  with this version — always gives full worked solution + explanation
 // ─────────────────────────────────────────────────────────────────
 
 app.post('/api/check-answer', async (req, res) => {
@@ -160,38 +160,34 @@ app.post('/api/check-answer', async (req, res) => {
       return res.status(400).json({ error: 'question and studentAnswer are required' });
     }
 
-    const prompt = `You are an experienced, confident ${subjectId || ''} university teacher in Pakistan, explaining directly to a student. Write the way a real teacher talks — clear, warm, and to the point. NO repetition, NO filler sentences, NO uncertain phrasing like "tumne is baat ka jawab nahi diya". Just teach.
+    const prompt = `You are an experienced, confident ${subjectId || ''} university teacher in Pakistan, explaining directly to a student. Write the way a real teacher talks — clear, warm, and to the point. NO repetition, NO filler sentences, NO uncertain phrasing.
 
 Write in ROMAN URDU mixed naturally with English technical terms (the way Pakistani teachers actually explain — e.g. "Yahan formula lagayenge", "Is step mein hum dekhte hain ke...", "Answer ka matlab hai..."). Do NOT write in pure English. Do NOT write in Urdu script.
 
 QUESTION:
 ${question}
 
-${correctAnswer ? `CORRECT SOLUTION (for your own reference — explain it in your own words, do not copy verbatim):\n${correctAnswer}\n` : ''}
+${correctAnswer ? `CORRECT SOLUTION (for your own reference — explain it in your own words):\n${correctAnswer}\n` : ''}
 
 STUDENT'S SUBMITTED ANSWER:
 ${studentAnswer}
 
-First, decide if the student's submission is a genuine attempt at solving the problem, or if it's empty/gibberish/an admission of not understanding (e.g. "i don't know", "i can't understand this"). 
+First check if the student's answer matches the correct answer/approach.
 
 Respond in EXACTLY this format:
 
 VERDICT: [Correct / Partially Correct / Incorrect]
 
 FEEDBACK:
-If the student did NOT attempt the problem (wrote something like "I don't understand" or left it blank/irrelevant):
-- Don't analyze their "mistake" — there's nothing to analyze. Instead, directly and warmly teach the full solution step by step, as if explaining it for the first time to a student who is stuck. Use short numbered steps (Step 1, Step 2...). End with the final answer clearly highlighted.
+- Start with one short line: agar student ka answer sahi tha to tareef karo briefly; agar galat ya incomplete tha to ek line mein batao kya masla tha (ya agar unhone "samajh nahi aaya" type likha ho to seedha solution shuru kar do, koi mistake point out karne ki zarurat nahi).
+- Then ALWAYS provide the COMPLETE worked solution to the question, step by step, regardless of whether the student got it right or wrong — as if teaching it fresh. Use short numbered steps (Step 1, Step 2, Step 3...).
+- In each step, explain the REASONING simply (why we do this step), not just the formula/math.
+- Clearly show the formula being used, the values substituted, and the calculation.
+- End with: **Final Answer: [value with units]** clearly highlighted.
 
-If the student DID attempt the problem and got it WRONG:
-- In 1-2 sentences, point out exactly where their reasoning went wrong (quote the specific part).
-- Then teach the correct solution step by step (Step 1, Step 2...), explaining the logic simply, not just the math.
-- End with the final answer clearly highlighted.
+This full solution must appear every single time, whether the student was right, partially right, or wrong — the goal is for the student to learn the complete method by reading your response.
 
-If the student got it CORRECT or PARTIALLY CORRECT:
-- Briefly and warmly confirm what they did right.
-- If partially correct, clearly point out the one thing missing or wrong, then show the corrected final step and answer.
-
-Keep formulas/numbers in standard notation. Keep total response concise — no more than 150-200 words. Sound like a real teacher, never robotic or repetitive.`;
+Keep formulas/numbers in standard notation. Total response should be focused and well-organized — no more than 220 words. Sound like a real teacher, never robotic or repetitive.`;
 
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -203,7 +199,7 @@ Keep formulas/numbers in standard notation. Keep total response concise — no m
         model: 'llama-3.1-8b-instant',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.5,
-        max_tokens: 700,
+        max_tokens: 800,
       }),
     });
 
