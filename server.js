@@ -149,7 +149,8 @@ app.listen(PORT, () => {
 
 // ─────────────────────────────────────────────────────────────────
 //  REPLACE your existing /api/check-answer endpoint in server.js
-//  with this version — always gives full worked solution + explanation
+//  with this version — forces ACTUAL numerical calculation,
+//  not just conceptual explanation.
 // ─────────────────────────────────────────────────────────────────
 
 app.post('/api/check-answer', async (req, res) => {
@@ -160,34 +161,41 @@ app.post('/api/check-answer', async (req, res) => {
       return res.status(400).json({ error: 'question and studentAnswer are required' });
     }
 
-    const prompt = `You are an experienced, confident ${subjectId || ''} university teacher in Pakistan, explaining directly to a student. Write the way a real teacher talks — clear, warm, and to the point. NO repetition, NO filler sentences, NO uncertain phrasing.
+    const prompt = `You are an experienced ${subjectId || ''} university teacher in Pakistan. A student submitted an answer to a numerical/math problem. Your job is to SOLVE THE PROBLEM COMPLETELY WITH ACTUAL NUMBERS, not just explain the concept.
 
-Write in ROMAN URDU mixed naturally with English technical terms (the way Pakistani teachers actually explain — e.g. "Yahan formula lagayenge", "Is step mein hum dekhte hain ke...", "Answer ka matlab hai..."). Do NOT write in pure English. Do NOT write in Urdu script.
+Write in ROMAN URDU mixed naturally with English technical terms (e.g. "Yahan formula lagayenge", "Ab calculate karte hain", "Value substitute karne se milta hai..."). Do NOT write in pure English. Do NOT write in Urdu script.
 
 QUESTION:
 ${question}
 
-${correctAnswer ? `CORRECT SOLUTION (for your own reference — explain it in your own words):\n${correctAnswer}\n` : ''}
+${correctAnswer ? `MODEL SOLUTION (use this to get the correct numbers/formula — show the same calculation steps in your own words):\n${correctAnswer}\n` : ''}
 
 STUDENT'S SUBMITTED ANSWER:
 ${studentAnswer}
 
-First check if the student's answer matches the correct answer/approach.
+CRITICAL INSTRUCTIONS — you MUST follow these exactly:
+1. Identify the correct formula needed for this question.
+2. Write down the GIVEN VALUES from the question with their units (e.g. "q1 = 4×10⁻⁶ C, r = 0.3 m").
+3. SUBSTITUTE the actual numbers into the formula — show the formula with numbers plugged in, not just symbols.
+4. Perform the ACTUAL ARITHMETIC step by step (multiplication, division, powers) — show the intermediate numbers, not just the final answer.
+5. State the FINAL NUMERICAL ANSWER with correct units, clearly highlighted.
+
+This is NOT optional — every response must contain real numbers being calculated, like a worked example in a textbook. Do not just describe what should be done; actually do the calculation with the numbers from the question.
 
 Respond in EXACTLY this format:
 
 VERDICT: [Correct / Partially Correct / Incorrect]
 
 FEEDBACK:
-- Start with one short line: agar student ka answer sahi tha to tareef karo briefly; agar galat ya incomplete tha to ek line mein batao kya masla tha (ya agar unhone "samajh nahi aaya" type likha ho to seedha solution shuru kar do, koi mistake point out karne ki zarurat nahi).
-- Then ALWAYS provide the COMPLETE worked solution to the question, step by step, regardless of whether the student got it right or wrong — as if teaching it fresh. Use short numbered steps (Step 1, Step 2, Step 3...).
-- In each step, explain the REASONING simply (why we do this step), not just the formula/math.
-- Clearly show the formula being used, the values substituted, and the calculation.
-- End with: **Final Answer: [value with units]** clearly highlighted.
+- One short line: tell the student briefly if their final answer/approach matched or not (or if they wrote "I don't understand" type response, skip this and go straight to solving).
+- Step 1: [formula needed and why]
+- Step 2: [given values listed with units]
+- Step 3: [substitute numbers into formula]
+- Step 4: [show the arithmetic/calculation clearly, intermediate steps included]
+- Step 5 (if needed): [further simplification]
+- **Final Answer: [exact numerical value with units]**
 
-This full solution must appear every single time, whether the student was right, partially right, or wrong — the goal is for the student to learn the complete method by reading your response.
-
-Keep formulas/numbers in standard notation. Total response should be focused and well-organized — no more than 220 words. Sound like a real teacher, never robotic or repetitive.`;
+Keep it focused — no more than 220 words, but NEVER skip the actual number-crunching. A student reading this must be able to see exactly how the final number was obtained.`;
 
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -198,7 +206,7 @@ Keep formulas/numbers in standard notation. Total response should be focused and
       body: JSON.stringify({
         model: 'llama-3.1-8b-instant',
         messages: [{ role: 'user', content: prompt }],
-        temperature: 0.5,
+        temperature: 0.3,
         max_tokens: 800,
       }),
     });
