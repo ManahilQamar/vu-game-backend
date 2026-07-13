@@ -164,50 +164,63 @@ app.post('/api/check-answer', async (req, res) => {
       return res.status(400).json({ error: 'question and studentAnswer are required' });
     }
 
-    const prompt = `You are a ${subjectId || 'university'} examiner checking a student's answer. You have been given the MODEL SOLUTION — this is the GROUND TRUTH. Your job is to compare the student's answer against this model solution FAIRLY and then teach the correct method.
+    const prompt = `You are a strict but fair ${subjectId || 'university'} teacher checking a student's answer.
 
-CRITICAL RULES YOU MUST FOLLOW:
-1. The MODEL SOLUTION below is 100% correct. Do NOT second-guess it or use a different method.
-2. Compare the student's FINAL NUMERICAL ANSWER against the model solution's final answer. If they match (even if notation is slightly different), mark it CORRECT.
-3. If the student's answer is correct, say so clearly and still show the full worked solution.
-4. Use the EXACT SAME METHOD as the model solution — same formula, same steps, same order.
-5. Do NOT invent alternative methods. Stick strictly to the model solution's approach.
-6. Write explanation in ROMAN URDU mixed with English (e.g. "Ab hum formula mein values daaltay hain").
+MODEL SOLUTION (100% correct — use EXACTLY this method and conclusion):
+${correctAnswer || 'Use standard textbook method.'}
 
 QUESTION:
 ${question}
 
-MODEL SOLUTION (this is the correct answer and method — follow it exactly):
-${correctAnswer || 'Use standard textbook method for this subject.'}
-
 STUDENT'S ANSWER:
 ${studentAnswer}
 
-STEP 1 — VERDICT:
-Compare student's final answer to the model solution's final answer.
-- If they match → CORRECT
-- If student showed right method but made arithmetic error → PARTIALLY CORRECT  
-- If wrong method or wrong answer → INCORRECT
-- If student wrote "don't know" or nothing meaningful → INCORRECT
+═══════════════════════════════
+VERDICT RULES — follow strictly:
+═══════════════════════════════
+- Read the student's answer CAREFULLY and completely before judging.
+- If the student has shown the KEY STEPS (even partially or informally), it counts as an attempt.
+- If student's logic/final result matches the model solution → CORRECT
+- If student showed right idea but missed one step or made small error → PARTIALLY CORRECT
+- ONLY mark INCORRECT if the student wrote something completely wrong, nonsensical, or "I don't know"
+- Do NOT penalize the student for writing in informal language if the math is right.
 
-STEP 2 — RESPONSE FORMAT (follow exactly):
+═══════════════════════════════
+RESPONSE FORMAT — follow exactly:
+═══════════════════════════════
 
 VERDICT: [Correct / Partially Correct / Incorrect]
 
 FEEDBACK:
-[One line: Student ka answer [sahi tha / ghalat tha / partially sahi tha] kyunki [brief reason].]
+[One sentence in Roman Urdu: Student ka answer [sahi/ghalat/partially sahi] tha kyunki ...]
 
-Ab hum is question ko model solution ki tarah step by step solve karte hain:
+Ab hum is question ko poori tarah step by step solve karte hain:
 
-Step 1: [formula ya concept jo use hoga — same as model solution]
-Step 2: [given values list karo with units]
-Step 3: [values substitute karo — show the actual numbers]
-Step 4: [calculation karo — show arithmetic clearly]
-[Step 5 if needed: further simplification]
+Step 1: [Starting assumption ya formula — same as model solution, explain in Roman Urdu]
 
-**Final Answer: [exact value with units]**
+Step 2: [Given values ya definitions — with actual math]
 
-IMPORTANT: Keep explanation in Roman Urdu + English. Never use a different formula or method than what the model solution uses. Total length: 180-220 words max.`;
+Step 3: [Main calculation ya substitution — show the actual numbers/algebra]
+
+Step 4: [Simplification — show the working]
+
+[Step 5 if needed]
+
+Conclusion: [Write a clear concluding statement like "Therefore, we have proved that..." — match the model solution's conclusion exactly. This must be a complete sentence, not just a number.]
+
+**∴ [Final proven statement in bold]**
+
+═══════════════════════════════
+IMPORTANT RULES:
+═══════════════════════════════
+- Use Roman Urdu + English mix for explanations (e.g. "Ab hum brackets kholtay hain", "Yahan common factor nikaltay hain")
+- Keep ALL math/formulas in standard notation
+- The Conclusion MUST be a full sentence (not just "2k" or a number)
+- For proof questions: end with "Therefore, [statement] is proved" 
+- For numerical questions: end with "Final Answer: [value with units]"
+- Use EXACTLY the same method as model solution — no alternative approaches
+- Temperature is low so stick to the model solution strictly
+- Total response: 200-250 words`;
 
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -219,7 +232,7 @@ IMPORTANT: Keep explanation in Roman Urdu + English. Never use a different formu
         model: 'llama-3.1-8b-instant',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.2,
-        max_tokens: 900,
+        max_tokens: 1000,
       }),
     });
 
