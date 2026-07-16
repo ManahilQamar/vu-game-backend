@@ -22,7 +22,7 @@ const GROQ_HEADERS = {
 async function groq(messages, max_tokens = 600) {
   const res = await axios.post(
     'https://api.groq.com/openai/v1/chat/completions',
-    { model: 'llama-3.1-8b-instant', messages, max_tokens },
+    { model: 'llama-3.3-70b-versatile', messages, max_tokens },
     { headers: GROQ_HEADERS }
   );
   return res.data.choices[0].message.content;
@@ -229,7 +229,7 @@ IMPORTANT RULES:
         'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
+        model: 'llama-3.3-70b-versatile',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.2,
         max_tokens: 1000,
